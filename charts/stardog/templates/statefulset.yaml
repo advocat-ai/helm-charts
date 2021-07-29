@@ -60,7 +60,7 @@ spec:
                   - {{ include "stardog.fullname" . }}
               topologyKey: "kubernetes.io/hostname"
         {{- end }}
-{{ if or .Values.cluster.enabled .Values.traffic.encrypt }}
+{{ if or .Values.cluster.enabled (or .Values.traffic.encrypt .Values.applicationInsights.connectionString) }}
       initContainers:
 {{ if .Values.cluster.enabled }}
       - name: wait-for-zk
@@ -107,6 +107,23 @@ spec:
         - name: stardog-keystore-vol
           mountPath: /etc/stardog-keystore
 {{ end }}
+{{ if .Values.applicationInsights.connectionString }}
+      - name: download-application-insights
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "alpine:latest"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk update
+          apk add wget
+          cd /opt/application-insights
+          wget https://github.com/microsoft/ApplicationInsights-Java/releases/download/3.1.1/applicationinsights-agent-3.1.1.jar
+          chmod a+rw applicationinsights-agent-3.1.1.jar
+        volumeMounts:
+        - name: application-insights-vol
+          mountPath: /opt/application-insights
+{{ end }}
 {{ end }}
       containers:
       - name: {{ include "stardog.fullname" . }}
@@ -140,6 +157,10 @@ spec:
           mountPath: /etc/stardog-keystore
           readOnly: true
 {{ end }}
+{{ if .Values.applicationInsights.connectionString }}
+        - name: application-insights-vol
+          mountPath: /opt/application-insights
+{{ end }}
         env:
         - name: PORT
           value: "{{ .Values.ports.server }}"
@@ -150,7 +171,11 @@ spec:
         - name: STARDOG_PROPERTIES
           value: "/etc/stardog-conf/stardog.properties"
         - name: STARDOG_SERVER_JAVA_ARGS
-          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/stardog-keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }}"
+          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/stardog-keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }} {{ if .Values.applicationInsights.connectionString }}-javaagent:/opt/application-insights/applicationinsights-agent-3.1.1.jar{{ end }}"
+{{- if .Values.applicationInsights.connectionString }}
+        - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+          value: "{{ .Values.applicationInsights.connectionString }}"
+{{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
         command:
@@ -219,6 +244,10 @@ spec:
         secret:
           secretName: {{ include "stardog.fullname" . }}-tls
       - name: stardog-keystore-vol
+        emptyDir: {}
+{{- end }}
+{{- if .Values.applicationInsights.connectionString }}
+      - name: application-insights-vol
         emptyDir: {}
 {{- end }}
       nodeSelector:

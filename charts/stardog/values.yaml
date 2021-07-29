@@ -3,6 +3,11 @@
 # The contents of the license file, encoded in Base64
 licenseBase64: ""
 
+# Application Insights instrumentation key, if defined, will redirect all logs
+# to Application Insights
+applicationInsights:
+  connectionString: ""
+
 # The namespace for Stardog resources that override the release namespace
 # namespaceOverride: stardog
 

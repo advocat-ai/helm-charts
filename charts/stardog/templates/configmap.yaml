@@ -31,8 +31,3 @@ data:
     pack.zookeeper.address={{ if .Values.zookeeper.enabled }}{{- template "zkservers" . }}{{ else }}{{ .Values.zookeeper.addresses }}{{ end }}
     pack.node.join.retry.count=15
     pack.node.join.retry.delay=1m
-{{- if .Values.traffic.encrypt }}
-    javax.net.ssl.keyStore=/etc/stardog-keystore/stardog-keystore.pkcs12
-    javax.net.ssl.keyStorePassword={{ include "stardog.keystorePassword" . }}
-    javax.net.ssl.keyStoreType=PKCS12
-{{- end }}
