@@ -32,7 +32,7 @@ spec:
         - |
           if [[ ! -f /etc/stardog-truststore/internal-ca.jks ]]; then
             echo "Importing internal CA to truststore..."
-            keytool -noprompt -import -file /etc/internal-ca/tls.crt -keystore /etc/stardog-truststore/internal-ca.jks -storepass {{ .Files.Glob "templates/keystore-password.txt" }}
+            keytool -noprompt -import -file /etc/internal-ca/tls.crt -keystore /etc/stardog-truststore/internal-ca.jks -storepass {{ include "stardog.keystorePassword" . }}
             echo "Import complete."
           fi
         volumeMounts:
@@ -55,7 +55,7 @@ spec:
         - name: PATH
           value: "/opt/stardog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         - name: STARDOG_JAVA_ARGS
-          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ .Files.Glob "templates/keystore-password.txt" }}{{ end }}"
+          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ include "stardog.keystorePassword" . }}{{ end }}"
         volumeMounts:
         - name: stardog-truststore-vol
           mountPath: /etc/stardog-truststore

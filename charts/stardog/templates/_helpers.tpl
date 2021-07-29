@@ -38,3 +38,13 @@ Return Stardog namespace to use
 {{- .Release.Namespace -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return the keystore password from the secret established with the pre-install hook
+*/}}
+{{- define "stardog.keystorePassword" -}}
+{{- $ns := (include "stardog.namespace" .) -}}
+{{- $prefix := (include "stardog.fullname" .) -}}
+{{- $secretName := (cat $prefix "-keystore-password") -}}
+{{- printf "%s" (b64dec (lookup "v1" "Secret" $ns $secretName).data.password) -}}
+{{- end -}}

@@ -16,7 +16,6 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.service.type }}
-{{- if eq .Values.service.type "LoadBalancer" }}
   ports:
   - port: {{ .Values.ports.server }}
     name: server
@@ -27,6 +26,5 @@ spec:
   {{- if .Values.service.loadBalancerIP }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
-{{- end}}
   selector:
     app: {{ include "stardog.fullname" . }}

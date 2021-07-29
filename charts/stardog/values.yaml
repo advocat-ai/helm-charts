@@ -82,7 +82,7 @@ image:
 # The storage class and size to use for Stardog home volumes for the pods
 persistence:
   storageClass: standard
-  size: 64Gi
+  size: 5Gi
 
 nodeSelector: {}
 tolerations: []
