@@ -60,7 +60,6 @@ spec:
                   - {{ include "stardog.fullname" . }}
               topologyKey: "kubernetes.io/hostname"
         {{- end }}
-{{ if or .Values.cluster.enabled (or .Values.traffic.encrypt .Values.applicationInsights.connectionString) }}
       initContainers:
 {{ if .Values.cluster.enabled }}
       - name: wait-for-zk
@@ -124,7 +123,19 @@ spec:
         - name: application-insights-vol
           mountPath: /opt/application-insights
 {{ end }}
-{{ end }}
+      - name: ensure-data-mount-is-writable
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "alpine:latest"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Change ownership of /var/opt/stardog to the stardog user ID 1000
+          chown 1000:1000 /var/opt/stardog/
+        volumeMounts:
+        - name: data
+          mountPath: /var/opt/stardog/
+          readOnly: false
       containers:
       - name: {{ include "stardog.fullname" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
