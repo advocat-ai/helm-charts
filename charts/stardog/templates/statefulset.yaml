@@ -219,10 +219,10 @@ spec:
       volumes:
       - name: stardog-license
         secret:
-          secretName: stardog-license
+          secretName: {{ include "stardog.fullname" . }}-license
       - name: {{ include "stardog.fullname" . }}-properties-vol
-        secret:
-          secretName: {{ include "stardog.fullname" . }}-properties
+        configMap:
+          name: {{ include "stardog.fullname" . }}-properties
           items:
           - key: stardog.properties
             path: stardog.properties
