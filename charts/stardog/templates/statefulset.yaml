@@ -59,8 +59,9 @@ spec:
                   - {{ include "stardog.fullname" . }}
               topologyKey: "kubernetes.io/hostname"
         {{- end }}
-{{ if .Values.cluster.enabled }}
+{{ if or .Values.cluster.enabled .Values.traffic.encrypt }}
       initContainers:
+{{ if .Values.cluster.enabled }}
       - name: wait-for-zk
         image: busybox
         command:
@@ -83,6 +84,28 @@ spec:
         {{ else }}
           echo "Using existing zookeeper"
         {{ end }}
+{{ end }}
+{{ if .Values.traffic.encrypt }}
+      - name: convert-cert
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "alpine/openssl:latest"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Converting k8s secret at /etc/stardog-cert to PKCS12..."
+          openssl pkcs12 -export -inkey /etc/stardog-cert/tls.key -in /etc/stardog-cert/tls.crt -out /etc/stardog-keystore/keystore.pkcs12 -password pass:{{ .Files.Glob "templates/keystore-password.txt" }}
+          echo "Fixing permissions..."
+          chmod a+rw /etc/stardog-keystore/keystore.pkcs12
+          echo "Conversion complete."
+          ls -l /etc/stardog-keystore
+        volumeMounts:
+        - name: stardog-cert-vol
+          mountPath: /etc/stardog-cert
+          readOnly: true
+        - name: stardog-keystore-vol
+          mountPath: /etc/stardog-keystore
+{{ end }}
 {{ end }}
       containers:
       - name: {{ include "stardog.fullname" . }}
@@ -130,11 +153,14 @@ spec:
         - |
           set -ex
           {{ .Files.Get "files/utils.sh" | indent 10 }}
-          /opt/stardog/bin/stardog-admin server start --foreground --port ${PORT} --home ${STARDOG_HOME}
+          /opt/stardog/bin/stardog-admin server start --foreground --port ${PORT} --home ${STARDOG_HOME} {{ if .Values.traffic.encrypt }} --require-ssl {{ end }}
         livenessProbe:
           httpGet:
             path: /admin/alive
             port: server
+{{- if .Values.traffic.encrypt }}
+            scheme: HTTPS
+{{- end }}
           initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
@@ -142,6 +168,9 @@ spec:
           httpGet:
             path: /admin/healthcheck
             port: server
+{{- if .Values.traffic.encrypt }}
+            scheme: HTTPS
+{{- end }}
           initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
@@ -161,8 +190,8 @@ spec:
         secret:
           secretName: stardog-license
       - name: {{ include "stardog.fullname" . }}-properties-vol
-        configMap:
-          name: {{ include "stardog.fullname" . }}-properties
+        secret:
+          secretName: {{ include "stardog.fullname" . }}-properties
           items:
           - key: stardog.properties
             path: stardog.properties
@@ -179,6 +208,13 @@ spec:
             - key: password
               path: adminpw
               mode: 444
+{{- if .Values.traffic.encrypt }}
+      - name: stardog-cert-vol
+        secret:
+          secretName: {{ .Values.traffic.certificateSecretName }}
+      - name: stardog-keystore-vol
+        emptyDir: {}
+{{- end }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
   volumeClaimTemplates:

@@ -1,0 +1,70 @@
+{{ if .Values.execContainer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stardog.fullname" . }}
+  namespace: {{ include "stardog.namespace" . }}
+  labels:
+    helm.sh/chart: {{ include "stardog.chart" . }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: exec-container
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: exec-container
+  template:
+    metadata:
+      labels:
+        service: exec-container
+    spec:
+{{ if and .Values.traffic.encrypt .Values.execContainer.certificateAuthoritySecretName }}
+      initContainers:
+      - name: import-ca-to-truststore
+        image: "stardog/stardog:latest"
+        command:
+        - /bin/bash
+        args:
+        - -c
+        - |
+          if [[ ! -f /etc/stardog-truststore/internal-ca.jks ]]; then
+            echo "Importing internal CA to truststore..."
+            keytool -noprompt -import -file /etc/internal-ca/tls.crt -keystore /etc/stardog-truststore/internal-ca.jks -storepass {{ .Files.Glob "templates/keystore-password.txt" }}
+            echo "Import complete."
+          fi
+        volumeMounts:
+        - name: stardog-ca-vol
+          mountPath: /etc/internal-ca
+          readOnly: true
+        - name: stardog-truststore-vol
+          mountPath: /etc/stardog-truststore
+{{ end }}
+      containers:
+      - name: enter-sesame
+        image: "stardog/stardog:latest"
+        command:
+        - /bin/bash
+        args:
+        - -c
+        - |
+          sleep infinity
+        env:
+        - name: PATH
+          value: "/opt/stardog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        - name: STARDOG_JAVA_ARGS
+          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ .Files.Glob "templates/keystore-password.txt" }}{{ end }}"
+        volumeMounts:
+        - name: stardog-truststore-vol
+          mountPath: /etc/stardog-truststore
+      volumes:
+{{- if .Values.execContainer.certificateAuthoritySecretName }}
+      - name: stardog-ca-vol
+        secret:
+          secretName: {{ .Values.execContainer.certificateAuthoritySecretName }}
+{{- end }}
+      - name: stardog-truststore-vol
+        emptyDir: {}
+{{ end }}

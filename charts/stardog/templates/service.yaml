@@ -15,6 +15,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  type: {{ .Values.service.type }}
+{{- if eq .Values.service.type "LoadBalancer" }}
   ports:
   - port: {{ .Values.ports.server }}
     name: server
@@ -22,9 +24,9 @@ spec:
   - port: {{ .Values.ports.sql }}
     name: sql
   {{- end }}
-  type: {{ .Values.service.type }}
   {{- if .Values.service.loadBalancerIP }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
+{{- end}}
   selector:
     app: {{ include "stardog.fullname" . }}

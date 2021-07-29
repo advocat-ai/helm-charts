@@ -1,9 +1,13 @@
 ---
+
+# The contents of the license file, encoded in Base64
+licenseBase64: ""
+
 # The namespace for Stardog resources that override the release namespace
 # namespaceOverride: stardog
 
 # The number of Stardog replicas to deploy in the cluster
-replicaCount: 3
+replicaCount: 1
 
 # How to start the pods - use OrderedReady to use the default behavior of
 # starting each pod one at a time or use Parallel to start them all at once
@@ -17,7 +21,15 @@ waitForStartSeconds: 300
 
 cluster:
   # Start Stardog as a cluster
-  enabled: true
+  enabled: false
+
+# Treatment of traffic to/from a stardog instance
+traffic:
+  # Whether to encrypt traffic in transit
+  encrypt: false
+  # If "encrypt" is true, the name of the Kubernetes secret containing 
+  # certificate to use to encrypt/decrypt traffic
+  certificateSecretName: ""
 
 # The number of seconds to wait for pods to shutdown before
 # killing them forcefully
@@ -31,6 +43,17 @@ service:
   type: LoadBalancer
   annotations: {}
   # loadBalancerIP: 0.0.0.0
+
+# If the service type isn't LoadBalancer (i.e. it's ClusterIP and only exposed
+# in the cluster), it may be useful to have a dedicated idle container that one
+# can "kubectl exec" into and execute "stardog" and "stardog-admin" commands
+# with.
+execContainer:
+  enabled: false
+  # If traffic is encrypted with a self-signed certificate or an internal only
+  # certificate authority, this secret contains the TLS certificate for the 
+  # authority.
+  certificateAuthoritySecretName: ""
 
 # The server port is the port to expose the Stardog server
 # The sql port is the port to expose Stardog's business intelligence server
@@ -59,7 +82,7 @@ image:
 # The storage class and size to use for Stardog home volumes for the pods
 persistence:
   storageClass: standard
-  size: 5Gi
+  size: 64Gi
 
 nodeSelector: {}
 tolerations: []
