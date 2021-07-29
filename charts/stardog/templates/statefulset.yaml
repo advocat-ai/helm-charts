@@ -96,7 +96,7 @@ spec:
           echo "Converting k8s secret at /etc/stardog-cert to PKCS12..."
           openssl pkcs12 -export -inkey /etc/stardog-cert/tls.key -in /etc/stardog-cert/tls.crt -out /etc/stardog-keystore/keystore.pkcs12 -password pass:{{ $keystorePassword }}
           echo "Fixing permissions..."
-          chmod a+rw /etc/stardog-keystore/keystore.pkcs12
+          chown -R 1000:1000 /etc/stardog-keystore/
           echo "Conversion complete."
           ls -l /etc/stardog-keystore
         volumeMounts:
@@ -118,7 +118,7 @@ spec:
           apk add wget
           cd /opt/application-insights
           wget https://github.com/microsoft/ApplicationInsights-Java/releases/download/3.1.1/applicationinsights-agent-3.1.1.jar
-          chmod a+rw applicationinsights-agent-3.1.1.jar
+          chown -R /opt/application-insights
         volumeMounts:
         - name: application-insights-vol
           mountPath: /opt/application-insights
@@ -182,7 +182,7 @@ spec:
         - name: STARDOG_PROPERTIES
           value: "/etc/stardog-conf/stardog.properties"
         - name: STARDOG_SERVER_JAVA_ARGS
-          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/stardog-keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }} {{ if .Values.applicationInsights.connectionString }}-javaagent:/opt/application-insights/applicationinsights-agent-3.1.1.jar{{ end }}"
+          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }} {{ if .Values.applicationInsights.connectionString }}-javaagent:/opt/application-insights/applicationinsights-agent-3.1.1.jar{{ end }}"
 {{- if .Values.applicationInsights.connectionString }}
         - name: APPLICATIONINSIGHTS_CONNECTION_STRING
           value: "{{ .Values.applicationInsights.connectionString }}"
