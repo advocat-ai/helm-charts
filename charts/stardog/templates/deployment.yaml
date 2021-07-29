@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "stardog.fullname" . }}
+  name: {{ include "stardog.fullname" . }}-exec-container
   namespace: {{ include "stardog.namespace" . }}
   labels:
     helm.sh/chart: {{ include "stardog.chart" . }}
