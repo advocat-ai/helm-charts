@@ -56,7 +56,7 @@ spec:
         - name: PATH
           value: "/opt/stardog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         - name: STARDOG_JAVA_ARGS
-          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ $trustStorePassword }}{{ end }}"
+          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if and .Values.traffic.encrypt (and .Values.execContainer.ca.crt .Values.execContainer.ca.key) }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ $trustStorePassword }}{{ end }}"
         volumeMounts:
         - name: stardog-truststore-vol
           mountPath: /etc/stardog-truststore
