@@ -27,9 +27,11 @@ cluster:
 traffic:
   # Whether to encrypt traffic in transit
   encrypt: false
-  # If "encrypt" is true, the name of the Kubernetes secret containing 
-  # certificate to use to encrypt/decrypt traffic
-  certificateSecretName: ""
+  # The public and private portions of the certificate (in PEM form) to use for
+  # traffic encryption.
+  tls:
+    crt: ""
+    key: ""
 
 # The number of seconds to wait for pods to shutdown before
 # killing them forcefully
@@ -53,7 +55,9 @@ execContainer:
   # If traffic is encrypted with a self-signed certificate or an internal only
   # certificate authority, this secret contains the TLS certificate for the 
   # authority.
-  certificateAuthoritySecretName: ""
+  ca:
+    crt: ""
+    key: ""
 
 # The server port is the port to expose the Stardog server
 # The sql port is the port to expose Stardog's business intelligence server

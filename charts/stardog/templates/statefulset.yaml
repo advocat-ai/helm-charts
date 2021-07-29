@@ -1,3 +1,4 @@
+{{- $keystorePassword := (randAlphaNum 8) -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -94,7 +95,7 @@ spec:
         - -c
         - |
           echo "Converting k8s secret at /etc/stardog-cert to PKCS12..."
-          openssl pkcs12 -export -inkey /etc/stardog-cert/tls.key -in /etc/stardog-cert/tls.crt -out /etc/stardog-keystore/keystore.pkcs12 -password pass:{{ .Files.Glob "templates/keystore-password.txt" }}
+          openssl pkcs12 -export -inkey /etc/stardog-cert/tls.key -in /etc/stardog-cert/tls.crt -out /etc/stardog-keystore/keystore.pkcs12 -password pass:{{ $keystorePassword }}
           echo "Fixing permissions..."
           chmod a+rw /etc/stardog-keystore/keystore.pkcs12
           echo "Conversion complete."
@@ -134,6 +135,11 @@ spec:
         - name: {{ include "stardog.fullname" . }}-log4j-vol
           mountPath: /var/opt/stardog/log4j2.xml
           subPath: log4j2.xml
+{{ if .Values.traffic.encrypt }}
+        - name: stardog-keystore-vol
+          mountPath: /etc/stardog-keystore
+          readOnly: true
+{{ end }}
         env:
         - name: PORT
           value: "{{ .Values.ports.server }}"
@@ -144,7 +150,7 @@ spec:
         - name: STARDOG_PROPERTIES
           value: "/etc/stardog-conf/stardog.properties"
         - name: STARDOG_SERVER_JAVA_ARGS
-          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }}"
+          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/stardog-keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }}"
         resources:
 {{ toYaml .Values.resources | indent 10 }}
         command:
@@ -211,7 +217,7 @@ spec:
 {{- if .Values.traffic.encrypt }}
       - name: stardog-cert-vol
         secret:
-          secretName: {{ .Values.traffic.certificateSecretName }}
+          secretName: {{ include "stardog.fullname" . }}-tls
       - name: stardog-keystore-vol
         emptyDir: {}
 {{- end }}

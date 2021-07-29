@@ -1,4 +1,5 @@
-{{ if .Values.execContainer.enabled }}
+{{- if .Values.execContainer.enabled -}}
+{{ $trustStorePassword := (randAlphaNum 8) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,7 +22,7 @@ spec:
       labels:
         service: exec-container
     spec:
-{{ if and .Values.traffic.encrypt .Values.execContainer.certificateAuthoritySecretName }}
+{{ if and .Values.traffic.encrypt (and .Values.execContainer.ca.crt .Values.execContainer.ca.key) }}
       initContainers:
       - name: import-ca-to-truststore
         image: "stardog/stardog:latest"
@@ -32,7 +33,7 @@ spec:
         - |
           if [[ ! -f /etc/stardog-truststore/internal-ca.jks ]]; then
             echo "Importing internal CA to truststore..."
-            keytool -noprompt -import -file /etc/internal-ca/tls.crt -keystore /etc/stardog-truststore/internal-ca.jks -storepass {{ include "stardog.keystorePassword" . }}
+            keytool -noprompt -import -file /etc/internal-ca/tls.crt -keystore /etc/stardog-truststore/internal-ca.jks -storepass {{ $trustStorePassword }}
             echo "Import complete."
           fi
         volumeMounts:
@@ -55,16 +56,16 @@ spec:
         - name: PATH
           value: "/opt/stardog/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         - name: STARDOG_JAVA_ARGS
-          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ include "stardog.keystorePassword" . }}{{ end }}"
+          value: "-Dstardog.default.cli.server={{ if .Values.traffic.encrypt }}https{{ else }}http{{ end }}://{{ include "stardog.fullname" . }}:{{ .Values.ports.server }} {{ if .Values.execContainer.certificateAuthoritySecretName }}-Djavax.net.ssl.trustStore=/etc/stardog-truststore/internal-ca.jks -Djavax.net.ssl.trustStorePassword={{ $trustStorePassword }}{{ end }}"
         volumeMounts:
         - name: stardog-truststore-vol
           mountPath: /etc/stardog-truststore
       volumes:
-{{- if .Values.execContainer.certificateAuthoritySecretName }}
+{{- if and .Values.execContainer.ca.crt .Values.execContainer.ca.key }}
       - name: stardog-ca-vol
         secret:
-          secretName: {{ .Values.execContainer.certificateAuthoritySecretName }}
+          secretName: {{ include "stardog.fullname" . }}-ca-tls
 {{- end }}
       - name: stardog-truststore-vol
         emptyDir: {}
-{{ end }}
+{{- end -}}
