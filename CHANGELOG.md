@@ -1,6 +1,17 @@
+# Unreleased
 
-# 2.0.3 (Unreleased)
+* Add Stardog server start arguments to the values file (#66)
+* Provide parameters for setting the origin of the busybox image which is used
+  as a part of the Stardog pod initialization (#60)
+* Create the tmpDir used by Stardog if it doesn't already exist. This can be useful when
+  placing the tmpDir onto the same volume as STARDOG_HOME (/var/opt/stardog). Note 
+  that it's critical not to choose a path within STARDOG_HOME that could conflict with a
+  database name. See the [values.yaml](charts/stardog/values.yaml) for details. (#62)
 
+# 2.0.3 (2021-09-16)
+
+* Use Java G1 gc by default (#56)
+* Set JVM active processor count to k8s cpu requests, default to 2 (#51)
 * Remove admin password from post-install job standard out (#48)
 
 # 2.0.2 (2021-06-09)
