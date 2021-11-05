@@ -63,7 +63,8 @@ spec:
       initContainers:
 {{ if .Values.cluster.enabled }}
       - name: wait-for-zk
-        image: busybox
+        image: {{ .Values.busybox.image.repository }}:{{ .Values.busybox.image.tag }}
+        imagePullPolicy: {{ .Values.busybox.image.pullPolicy }}
         command:
         - /bin/sh
         - -c
@@ -182,11 +183,17 @@ spec:
         - name: STARDOG_PROPERTIES
           value: "/etc/stardog-conf/stardog.properties"
         - name: STARDOG_SERVER_JAVA_ARGS
-          value: "-Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }} {{ if .Values.applicationInsights.connectionString }}-javaagent:/opt/application-insights/applicationinsights-agent-3.1.1.jar{{ end }}"
+          value: "-XX:ActiveProcessorCount={{ .Values.resources.requests.cpu }}  -Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} -Djava.io.tmpdir={{ .Values.tmpDir }} {{ .Values.javaArgs }} {{ if .Values.traffic.encrypt }}-Djavax.net.ssl.keyStore=/etc/stardog-keystore/keystore.pkcs12 -Djavax.net.ssl.keyStorePassword={{ $keystorePassword }} -Djavax.net.ssl.keyStoreType=PKCS12{{ end }} {{ if .Values.applicationInsights.connectionString }}-javaagent:/opt/application-insights/applicationinsights-agent-3.1.1.jar{{ end }}"
 {{- if .Values.applicationInsights.connectionString }}
         - name: APPLICATIONINSIGHTS_CONNECTION_STRING
           value: "{{ .Values.applicationInsights.connectionString }}"
 {{- end }}
+        - name: STARDOG_PERF_JAVA_ARGS
+          value: "{{ .Values.stardogPerfJavaArgs }}"
+        - name: STARDOG_TMP_PATH
+          value: "{{ .Values.tmpDir }}"
+        - name: STARDOG_SERVER_START_ARGS
+          value: "{{ .Values.serverStartArgs }}"
         resources:
 {{ toYaml .Values.resources | indent 10 }}
         command:
@@ -227,6 +234,7 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:
       - name: {{ .Release.Name }}-image-pull-secret
+      - name: {{ .Release.Name }}-image-busybox-pull-secret
       volumes:
       - name: stardog-license
         secret:
